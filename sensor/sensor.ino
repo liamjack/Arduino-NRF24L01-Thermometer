@@ -16,13 +16,32 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
+// -- Structures --
+
+typedef struct {
+  uint32_t sensorId;
+  float temperature; 
+} dataPacket;
+
+// -- Constants --
+
+const uint32_t sensorId = 1;
+
+const rf24_datarate_e radioDataRate = RF24_250KBPS;
+const rf24_crclength_e radioCRCLength = RF24_CRC_8;
+const uint8_t radioPALevel = RF24_PA_MAX;
+const uint8_t radioChannel = 50;
+const uint8_t radioAddress[4] = "n01";
+
+const int thermometerResolution = 10;
+
 // -- Global variables --
 
 volatile int f_wdt = 1;
 int counter = 0;
 int packetCounter = 0;
 
-RF24 radio(9,10);
+RF24 radio(9, 10);
 OneWire oneWire(2);
 DallasTemperature sensors(&oneWire);
 
@@ -36,7 +55,7 @@ void counterHandler()
   // Should be 75 for 10 minutes (75 * 8 = 600 seconds = 10 minutes)
   // Use 1 for debugging purposes
   
-  if(counter == 1) {    
+  if(counter == 75) {    
     // Reset the counter to 0
     counter = 0;
     
@@ -95,19 +114,23 @@ void setupRadio()
  radio.begin();
  
  // Define the number of retries sending a packet
- radio.setRetries(15,15);
+ radio.setRetries(15, 15);
  
  // Define the radio's broadcast channel (0 - 127)
- radio.setChannel(30);
+ radio.setChannel(radioChannel);
  
  // Define the radio's bitrate (using cards lowest bitrate)
- radio.setDataRate(RF24_250KBPS);
+ radio.setDataRate(radioDataRate);
  
- // Define the radio's power amplifier level (RF24_PA_MIN for debugging, RF24_PA_HIGH for longest range)
- radio.setPALevel(RF24_PA_MIN);
+ // Define the radio's power amplifier level (RF24_PA_MIN for debugging, RF24_PA_MAX for longest range)
+ radio.setPALevel(radioPALevel);
  
- // Enable dynamic payloads for packets
- radio.enableDynamicPayloads();
+ // Define the size of packets
+ radio.setPayloadSize(sizeof(dataPacket));
+
+ radio.setCRCLength(radioCRCLength);
+
+ radio.setAddressWidth(3);
 }
 
 void setupThermometer()
@@ -116,7 +139,7 @@ void setupThermometer()
   sensors.begin();
   
   // Set the bit resolution to 9 for fast conversion times (9 - 12)
-  sensors.setResolution(9);
+  sensors.setResolution(thermometerResolution);
 }
 
 void setup()
@@ -139,17 +162,20 @@ void setup()
 
 void loop()
 {
+  dataPacket packet;
+
   // Request the sensors temperatures
   sensors.requestTemperatures();
   
   // Get the first sensor's temperature
-  float temperature = sensors.getTempCByIndex(0);
+  packet.sensorId = sensorId;
+  packet.temperature = sensors.getTempCByIndex(0);
   
   // Open a writing pipe on the radio
-  radio.openWritingPipe(0xE8E8F0F0E1LL);
+  radio.openWritingPipe(address);
   
   // Write the temperature to the pipe
-  radio.write(&temperature, sizeof(float));
+  radio.write(&packet, sizeof(dataPacket));
   
   // Sleep time
   enterSleep();

@@ -31,7 +31,8 @@ const rf24_datarate_e radioDataRate = RF24_250KBPS;
 const rf24_crclength_e radioCRCLength = RF24_CRC_8;
 const uint8_t radioPALevel = RF24_PA_MAX;
 const uint8_t radioChannel = 50;
-const uint8_t radioAddress[4] = "n01";
+
+const uint8_t nodeAddress[4] = "n01";
 
 const int thermometerResolution = 10;
 
@@ -172,7 +173,7 @@ void loop()
   packet.temperature = sensors.getTempCByIndex(0);
   
   // Open a writing pipe on the radio
-  radio.openWritingPipe(address);
+  radio.openWritingPipe(nodeAddress);
   
   // Write the temperature to the pipe
   radio.write(&packet, sizeof(dataPacket));

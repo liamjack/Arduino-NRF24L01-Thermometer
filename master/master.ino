@@ -56,10 +56,7 @@ void loop()
     float temperature = 0;
     
     // Read the packet received into the temperature variable
-    if(!radio.read(&temperature, sizeof(float))) {
-      // The sensor did not receive the ACK packet
-      Serial.println("ACK not received by client.");
-    }
+    radio.read(&temperature, sizeof(float));
     
     // Print the temperature
     Serial.println(temperature);
@@ -68,4 +65,3 @@ void loop()
     delay(100);
   }
 }
-
